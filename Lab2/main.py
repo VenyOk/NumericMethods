@@ -69,8 +69,8 @@ def main():
     C = solve(M1, M2)
     print("C =", *C)
     A = [Y[i] for i in range(n)]
-    B = [(Y[i + 1] - Y[i] - h * (C[i + 1] + 2 * C[i])) / (3 * h) for i in range(n - 1)]
-    D = [(C[i + 1] - C[i]) / (2 * h) for i in range(n - 1)]
+    B = [((Y[i + 1] - Y[i]) / h) - h / 3 * (C[i + 1] + 2 * C[i]) for i in range(n - 1)]
+    D = [(C[i + 1] - C[i]) / (3 * h) for i in range(n - 1)]
     print("A =", *A)
     print("=" * 20)
 
