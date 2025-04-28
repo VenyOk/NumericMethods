@@ -1,14 +1,17 @@
 from math import sqrt
 import matplotlib.pyplot as plt
 import numpy as np
+from time import time
 
-eps = 10e-3
-
+eps = 1e-3
 def f(x):
     return x ** 3 + 3 * x ** 2 - 2
 
 def df(x):
     return 3 * x ** 2 + 6 * x
+
+def ddf(x):
+    return 6 * x + 6
 
 def bisect_main(a, b, n):
     ans = dict()
@@ -29,7 +32,7 @@ def bisect(a, b):
         cnt += 1
         c = (a + b) / 2
         fc = f(c)
-        if abs(fc) < eps:
+        if abs(fc) < eps and abs(df(c)) > 1e-2 and abs(ddf(c)) > 1e-2:
             return c, cnt
         if f(a) * f(c) < 0:
             b = c
@@ -43,11 +46,11 @@ def newton(x0):
     for _ in range(1000):
         fx = f(x)
         dfx = df(x)
+        cnt += 1
         if abs(dfx) < 1e-12:
             return None, cnt
         x_new = x - fx / dfx
-        cnt += 1
-        if abs(x_new - x) < 1e-6:
+        if abs(x_new - x) < 1e-6 and df(x_new) != 0 and ddf(x_new) != 0:
             return x_new, cnt
         x = x_new
     return None, cnt
@@ -89,18 +92,22 @@ def plot_function_with_roots(roots_bisect, roots_newton):
     plt.show()
 
 def main():
+    t1 = time()
     result_bisect = bisect_main(-5, 5, 10)
+    t2 = time()
     print("Метод деления отрезка пополам")
     for k, v in result_bisect.items():
         error = abs(f(k))
-        print(f"корень = {k:.6f}, итерации = {v}, погрешность = {error:.2e}")
+        print(f"корень = {k:.6f}, итерации = {v}, погрешность = {error:.6e}, время = {(t2 - t1):.6f} сек")
 
     print()
+    t1 = time()
     result_newton = newton_main(-5, 5, 20)
+    t2 = time()
     print("Метод Ньютона")
     for k, v in result_newton.items():
         error = abs(f(k))
-        print(f"корень = {k:.6f}, итерации = {v}, погрешность = {error:.2e}")
+        print(f"корень = {k:.6f}, итерации = {v}, погрешность = {error:.6e}, время = {(t2 - t1):.6f} сек")
 
     plot_function_with_roots(result_bisect.keys(), result_newton.keys())
 
