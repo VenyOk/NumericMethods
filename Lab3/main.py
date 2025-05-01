@@ -1,107 +1,100 @@
 import math
-from typing import Callable, List, Tuple
+import numpy as np
 
+def f(x, y):
+    return np.array([
+        y[1],                 
+        math.exp(4 * x)  + 8 * y[0] + 8*y[1]
+    ])
 
-def differential_equation(x: float, Y: List[float]) -> List[float]:
-    return [Y[1], math.exp(4 * x) + 8 * Y[1] + 8 * Y[0]]
+def f2(x):
+    return -2 * math.sin(2*x) + (2.0/3.0) * math.cos(2*x) + (1.0/3.0) * math.cos(x)
 
-
-def runge_kutta_step(
-    func: Callable[[float, List[float]], List[float]], 
-    x: float, 
-    Y: List[float], 
-    step_size: float
-) -> List[float]:
-    k1 = [step_size * val for val in func(x, Y)]
-    Y1 = [Y[i] + 0.5 * k1[i] for i in range(len(Y))]
-
-    k2 = [step_size * val for val in func(x + 0.5 * step_size, Y1)]
-    Y2 = [Y[i] + 0.5 * k2[i] for i in range(len(Y))]
-
-    k3 = [step_size * val for val in func(x + 0.5 * step_size, Y2)]
-    Y3 = [Y[i] + k3[i] for i in range(len(Y))]
-
-    k4 = [step_size * val for val in func(x + step_size, Y3)]
-
-    Y_next = [
-        Y[i] + (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]) / 6 
-        for i in range(len(Y))
-    ]
-    return Y_next
-
-
-def exact_solution(x: float) -> Tuple[float, float]:
+def f1(x):
     sqrt6 = math.sqrt(6)
-    y = ((2*sqrt6 + 1)/48 * math.exp((4 + 2*sqrt6)*x) + 
-         (1 - 2*sqrt6)/48 * math.exp((4 - 2*sqrt6)*x) + 
-         (-1/24 * math.exp(4*x)))
+    y = ((2*sqrt6 + 1)/48 * math.exp((4 + 2*sqrt6)*x) +
+    (1 - 2*sqrt6)/48 * math.exp((4 - 2*sqrt6)*x) +
+    (-1/24 * math.exp(4*x)))
+    return y
+
+
+def runge_kutta_step(f, x, y, h):
+    k1 = f(x, y)
     
-    coef1 = (5*sqrt6 + 14)/24
-    coef2 = (14 - 5*sqrt6)/24
-    dy = (coef1 * math.exp((4 + 2*sqrt6)*x) + 
-          coef2 * math.exp((4 - 2*sqrt6)*x) + 
-          -1/6 * math.exp(4*x))
-    return y, dy
+    k2 = f(x + h/2, np.array([
+        y[0] + h * k1[0]/2,
+        y[1] + h * k1[1]/2
+    ]))
+    
+    k3 = f(x + h/2, np.array([
+        y[0] + h * k2[0]/2,
+        y[1] + h * k2[1]/2
+    ]))
+    
+    k4 = f(x + h, np.array([
+        y[0] + h * k3[0],
+        y[1] + h * k3[1]
+    ]))
+    
+    return np.array([
+        y[0] + (k1[0] + 2*k2[0] + 2*k3[0] + k4[0]) * h/6,
+        y[1] + (k1[1] + 2*k2[1] + 2*k3[1] + k4[1]) * h/6
+    ])
 
-
-def runge_kutta_solver(
-    func: Callable[[float, List[float]], List[float]], 
-    x0: float, 
-    Y0: List[float], 
-    x_end: float, 
-    step_size: float
-) -> List[Tuple[float, float, float, float, float, float]]:
-    results = []
+def runge_kutta(f, y0, x0, xend, h):
+    result = []
     x = x0
-    Y = Y0.copy()
-
-    exact_y, exact_y_prime = exact_solution(x)
-    results.append((x, Y[0], Y[1], exact_y, exact_y_prime, 0.0))
-
-    while x < x_end:
-        if x + 2*step_size > x_end:
-            return results
-
-        Y_h_prev = runge_kutta_step(func, x, Y, step_size)
-        Y_h = runge_kutta_step(func, x + step_size, Y_h_prev, step_size)
-
-        Y_2h = runge_kutta_step(func, x, Y, 2*step_size)
-
-        error = abs(Y_h[0] - Y_2h[0]) / (2 ** 4 - 1)
-        x += 2*step_size
-        Y = Y_h
-
-        exact_y, exact_y_prime = exact_solution(x)
-        results.append((x, Y[0], Y[1], exact_y, exact_y_prime, error))
-
-    return results
-
-
-def print_results(results: List[Tuple[float, float, float, float, float, float]]) -> None:
-    headers = ("x", "Approx y", "Exact y", "Approx y'", "Exact y'", "Error")
-    print("{:>8} {:>14} {:>14} {:>14} {:>14} {:>14}".format(*headers))
+    y = y0.copy()
     
-    for x_val, approx_y, approx_yprime, exact_y, exact_dy, err in results:
-        print("{:8.4f} {:14.6f} {:14.6f} {:14.6f} {:14.6f} {:14.6f}".format(
-            x_val, approx_y, exact_y, approx_yprime, exact_dy, err))
+    while x <= xend:
+        result.append(y.copy())
+        y = runge_kutta_step(f, x, y, h)
+        x += h
+    
+    return result
 
+def norm_full(a, b):
+    max_val = 0.0
+    for i in range(len(a)):
+        if 2*i >= len(b):
+            continue
+        for j in range(1, len(a[i])):
+            cur_val = abs(a[i][j] - b[2*i][j])
+            if cur_val > max_val:
+                max_val = cur_val
+    return max_val
 
 def main():
-    initial_x = 0.0
-    final_x = 1.0
-    initial_conditions = [0.0, 1.0]
-    step_size = 0.01
-
-    solution = runge_kutta_solver(
-        differential_equation, 
-        initial_x, 
-        initial_conditions, 
-        final_x, 
-        step_size
-    )
-
-    print_results(solution)
-
+    x0 = 0.0
+    xend = 1.0
+    h = 1.0
+    
+    eps = 0.001
+    
+    y0 = np.array([0.0, 1.0])
+    cnt = 0
+    while True:
+        sol_h = runge_kutta(f, y0, x0, xend, h)
+        sol_h2 = runge_kutta(f, y0, x0, xend, h/2)
+        
+        diff = norm_full(sol_h, sol_h2)
+        
+        if diff < eps:
+            print(diff / (2 **4 - 1))
+            break
+        cnt += 1
+        h /= 2
+    print(cnt)
+    print(f"h = {h}")
+    
+    solution = runge_kutta(f, y0, x0, xend, h)
+    
+    print("x\t\t y(x)\t\ty(x) (точное)\t\tпогрешность")
+    x = x0
+    for i in range(len(solution)):
+        print(f"{x:.2f}\t\t{solution[i][0]:.6f}\t{f1(x):.6f}\t{abs(f1(x)-solution[i][0]):.6f}")
+        x += h
+    
 
 if __name__ == "__main__":
     main()
